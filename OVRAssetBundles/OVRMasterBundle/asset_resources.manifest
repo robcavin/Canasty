@@ -1,0 +1,143 @@
+ManifestFileVersion: 0
+CRC: 1850521830
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: e3d97d0b0da776e563d1b599e7598041
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 514daf606fafe15252e944f03e5a4b24
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 109
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: ad074644ff568a14187a3690cfbd7534, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 70c2f484f132c044097f03d65cac3b24, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: b3d881e962d099f4a8eb492ef7e9a8c0, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+Assets:
+- Assets/Oculus/Avatar/Resources/FallbackTextures/fallback_diffuse_roughness_2048.png
+- Assets/Resources/OvrAvatarSettings.asset
+- Assets/Resources/Cards/Blue_PlayingCards_Club01_00.prefab
+- Assets/Oculus/Avatar/Resources/FallbackTextures/fallback_diffuse_roughness_256.png
+- Assets/Oculus/Avatar/Resources/Materials/Version1.5/Avatar_PC_SingleComponent.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond11_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Club02_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade06_00.prefab
+- Assets/Oculus/VR/Resources/OVRMRUnlitTransparent.shader
+- Assets/Oculus/Avatar/Resources/FallbackTextures/fallback_normal_2048.png
+- Assets/Resources/Cards/Blue_PlayingCards_Club04_00.prefab
+- Assets/Oculus/VR/Resources/OVRMRChromaKey.cginc
+- Assets/Resources/Cards/Blue_PlayingCards_Club13_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond02_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond05_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Club08_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade01_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade03_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond07_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond06_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart06_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond13_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade08_00.prefab
+- Assets/Resources/Cards/Blue_RifleShuffle_Second_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/Version1.5/Avatar_Mobile_Loader.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond12_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Blank_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Club07_00.prefab
+- Assets/Oculus/VR/Resources/Cubemap Blit.shader
+- Assets/Resources/Cards/Blue_LittleDiscard_00.prefab
+- Assets/Resources/OVRBuildConfig.asset
+- Assets/Resources/Cards/Blue_PlayingCards_Heart01_00.prefab
+- Assets/Oculus/VR/Resources/OVRMRUnlit.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Club12_00.prefab
+- Assets/Resources/Cards/Blue_RifleShuffle_First_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade05_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade04_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/AvatarSurfaceShaderSelfOccluding.shader
+- Assets/Resources/Cards/Blue_LittleDeck_00.prefab
+- Assets/Oculus/VR/Resources/Unlit Transparent Color.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Heart04_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart13_00.prefab
+- Assets/Resources/OculusPlatformSettings.asset
+- Assets/Resources/Cards/Blue_ManyDiscard_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/AvatarSurfaceShaderPBS.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Spade07_00.prefab
+- Assets/Oculus/VR/Resources/OVRMRCameraFrameLit.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Heart07_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart10_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/Version1.5/Avatar_Mobile_CombinedMesh.shader
+- Assets/Oculus/Avatar/Resources/Materials/Expressive/Avatar_Mobile_CombinedMeshExpressive.shader
+- Assets/Resources/ONSPSettings.asset
+- Assets/Resources/Cards/Blue_PlayingCards_Spade02_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond10_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade11_00.prefab
+- Assets/Oculus/VR/Resources/Underlay Transparent Occluder.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Club10_00.prefab
+- Assets/Oculus/VR/Resources/Texture2D Blit.shader
+- Assets/Oculus/Avatar/Resources/Materials/Expressive/Avatar_PC_SingleComponentExpressive.shader
+- Assets/Resources/Cards/Blue_5cards_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond08_00.prefab
+- Assets/Resources/Cards/Blue_ManyDeck_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade09_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/AvatarPBRV2Simple.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Club09_00.prefab
+- Assets/Resources/Cards/Blue_Spread_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart03_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Club06_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade13_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Spade12_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart12_00.prefab
+- Assets/Oculus/Avatar/Resources/FallbackTextures/fallback_normal_256.png
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond03_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Club03_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/Expressive/Avatar_Mobile_SingleComponentExpressive.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Heart02_00.prefab
+- Assets/Oculus/VR/Resources/OVRMRCameraFrame.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Club05_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/AvatarSurfaceShaderPBSV2.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Joker_10.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond09_00.prefab
+- Assets/Oculus/Avatar/Resources/FallbackTextures/fallback_diffuse_roughness_1024.png
+- Assets/Resources/Cards/Blue_Tower_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart11_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Joker_00.prefab
+- Assets/Resources/Cards/Blue_TowerUnfinished_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Club11_00.prefab
+- Assets/Oculus/Avatar/Resources/Materials/Version1.5/Avatar_Mobile_SingleComponent.shader
+- Assets/Oculus/Avatar/Resources/Materials/AvatarMaterialStateShader.cginc
+- Assets/Oculus/Avatar/Resources/Materials/Expressive/AvatarEyeLens.shader
+- Assets/Oculus/Avatar/Resources/Materials/AvatarSurfaceShader.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Spade10_00.prefab
+- Assets/Oculus/Avatar/Resources/FallbackTextures/fallback_normal_1024.tif
+- Assets/Resources/Cards/Blue_AllCards_00.prefab
+- Assets/Oculus/VR/Resources/Underlay Impostor.shader
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond04_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart05_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart08_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Heart09_00.prefab
+- Assets/Resources/Cards/Blue_PlayingCards_Diamond01_00.prefab
+Dependencies:
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_tif0
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_mat0
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_fbx0
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_shader0

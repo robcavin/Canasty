@@ -1,0 +1,24 @@
+ManifestFileVersion: 0
+CRC: 745906106
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 9723bea67306f41fbee9712dfb0db8b7
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 21c99c86a43ad817b2cb7f65458ae090
+HashAppended: 0
+ClassTypes:
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+Assets:
+- Assets/Playing Cards/Resource/Materials/BackColor_Blue/Blue_PlayingCards_Club09_00.mat
+- Assets/Playing Cards/Resource/Materials/BackColor_Black/Black_Deck_00.mat
+- Assets/Playing Cards/Resource/Materials/CasinoItem/Table_Square.mat
+Dependencies:
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_tif0
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_shader0

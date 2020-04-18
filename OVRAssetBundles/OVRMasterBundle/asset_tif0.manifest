@@ -1,0 +1,22 @@
+ManifestFileVersion: 0
+CRC: 2155550148
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: d49cba8615865b04447734adb878dac1
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 2ed26e3ad9f6be9c24f85f5f5b54339d
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+Assets:
+- Assets/Playing Cards/Resource/Textures/DeckBlack_col.tif
+- Assets/Playing Cards/Resource/Textures/Deck_nml.tif
+- Assets/Playing Cards/Resource/Textures/Table_Square_nml.tif
+- Assets/Playing Cards/Resource/Textures/Table_Square_col.tif
+- Assets/Playing Cards/Resource/Textures/Table_Square_mtl.tif
+- Assets/Playing Cards/Resource/Textures/PlayingCards_Club09_00_col.tif
+- Assets/Playing Cards/Resource/Textures/BackColor_Blue_col.tif
+Dependencies: []

@@ -1,0 +1,52 @@
+ManifestFileVersion: 0
+CRC: 3000823478
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: e2822c9fadab5a10ecd13d1614eb7d5c
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 0bc8f6b40e4a379a9fd67952039caa4c
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 20
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+- Class: 81
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: df9f338034892c44ebb62d97894772f1, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 7e933e81d3c20c74ea6fdc708a67e3a5, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: ac27124318cf8e84aa7350c2ac1cdb80, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 5178bc8574ce2bf4388e787a2e2af326, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 00f3402a2ea5bff4880c0313515240cd, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+Assets:
+- Assets/Oculus/Avatar/Content/Prefabs/LocalAvatar.prefab
+- Assets/Playing Cards/Resource/Prefab/BackColor_Black/Black_ManyDeck_00.prefab
+- Assets/Oculus/VR/Prefabs/OVRCameraRig.prefab
+- Assets/Playing Cards/Resource/Prefab/CasinoItem/Table_Square_00.prefab
+Dependencies:
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_resources
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_fbx0
+- D:/Projects/Canasty/OVRAssetBundles/OVRMasterBundle/asset_mat0

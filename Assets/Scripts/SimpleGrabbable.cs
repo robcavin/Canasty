@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class SimpleGrabbable : MonoBehaviour
 {
+    public bool isGrabbed = false;
+
     // Start is called before the first frame update
     void Start()
     {

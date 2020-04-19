@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class CardHandController : MonoBehaviour
 {
+    public CanastyController canastyController;
+
     public GameObject highlighter = null;
     public bool isHighlighting { get; private set; } = false;
 
@@ -11,13 +13,12 @@ public class CardHandController : MonoBehaviour
     private float highlightAngle = 0;
 
     private LinkedList<GameObject> cards = new LinkedList<GameObject>();
+    private Dictionary<byte, GameObject> cardCache = new Dictionary<byte, GameObject>();
 
     public bool isCardInHand(GameObject card)
     {
         return cards.Contains(card);
     }
-
-    bool first = true;
 
     public float spreadFunc(float x, float mean, float sigma)
     {
@@ -83,6 +84,8 @@ public class CardHandController : MonoBehaviour
             cards.AddLast(card);
 
         updateCardRotations(highlightAngle);
+
+        canastyController.OnCardHandUpdate(cards);
     }
 
     public void ReleaseCard(GameObject card)
@@ -92,6 +95,8 @@ public class CardHandController : MonoBehaviour
         cards.Remove(card);
 
         updateCardRotations(highlightAngle);
+
+        canastyController.OnCardHandUpdate(cards);
     }
 
 
@@ -103,14 +108,6 @@ public class CardHandController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (first)
-        {
-            var deckController = GameObject.Find("MainDeck").GetComponent<DeckController>();
-            for (int i = 0; i < 10; i++)
-                AddCard(deckController.getNextCard(transform.position, transform.rotation));
-            first = false;
-        }
-
         highlightStrength = 0;
         highlightAngle = 0;
         isHighlighting = false;
@@ -136,5 +133,35 @@ public class CardHandController : MonoBehaviour
         }
 
         updateCardRotations(highlightAngle);
+    }
+
+    public void updateCardHand(byte[] cardIndices)
+    {
+        cards.Clear();
+
+        foreach (var index in cardIndices)
+        {
+            if (cardCache.ContainsKey(index))
+                cards.AddLast(cardCache[index]);
+
+            else
+            {
+                var card = GameObject.Find("Card" + index.ToString());
+                if (card == null)
+                    card = DeckController.instantiateCard(index);
+                if (card != null)
+                {
+                    card.GetComponent<Rigidbody>().isKinematic = true;
+                    card.transform.position = transform.position;
+                    card.transform.rotation = transform.rotation;
+                    card.transform.parent = transform;
+                    cards.AddLast(card);
+
+                    cardCache[index] = card;
+                }
+            }
+        }
+
+        updateCardRotations(0);
     }
 }

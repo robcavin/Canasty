@@ -74,12 +74,19 @@ namespace Oculus.Platform
 
 
     int initialPlaybackDelayMS;
+    private UInt64 _senderID = 0;
     public UInt64 senderID
     {
-      set
-      {
-        pcmSource.SetSenderID(value);
-      }
+        get
+        {
+            return _senderID;
+        }
+        set
+        {
+            _senderID = value;
+            if (pcmSource != null)
+                pcmSource.SetSenderID(value);
+        }
     }
 
     public AudioSource audioSource;
@@ -108,6 +115,8 @@ namespace Oculus.Platform
     protected void Awake()
     {
       CreatePCMSource();
+      if (_senderID != 0)
+        pcmSource.SetSenderID(_senderID);
       if(audioSource == null) {
         audioSource = gameObject.AddComponent<AudioSource>();
       }

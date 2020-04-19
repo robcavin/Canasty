@@ -161,16 +161,16 @@ namespace Oculus.Platform
       if (isBuildSettingsExpanded)
       {
         GUIHelper.HInset(6, () => {
-          if (!PlayerSettings.virtualRealitySupported)
-          {
-            EditorGUILayout.HelpBox("VR Support isn't enabled in the Player Settings", MessageType.Warning);
-          }
-          else
-          {
-            EditorGUILayout.HelpBox("VR Support is enabled", MessageType.Info);
-          }
+          //if (!PlayerSettings.virtualRealitySupported)
+          //{
+          //  EditorGUILayout.HelpBox("VR Support isn't enabled in the Player Settings", MessageType.Warning);
+          //}
+          //else
+          //{
+          //  EditorGUILayout.HelpBox("VR Support is enabled", MessageType.Info);
+          //}
 
-          PlayerSettings.virtualRealitySupported = MakeToggle(new GUIContent("Virtual Reality Support"), PlayerSettings.virtualRealitySupported);
+          //PlayerSettings.virtualRealitySupported = MakeToggle(new GUIContent("Virtual Reality Support"), PlayerSettings.virtualRealitySupported);
           PlayerSettings.bundleVersion = MakeTextBox(new GUIContent("Bundle Version"), PlayerSettings.bundleVersion);
 #if UNITY_5_3 || UNITY_5_4 || UNITY_5_5
           PlayerSettings.bundleIdentifier = MakeTextBox(new GUIContent("Bundle Identifier"), PlayerSettings.bundleIdentifier);

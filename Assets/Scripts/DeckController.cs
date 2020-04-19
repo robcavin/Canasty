@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class DeckController : MonoBehaviour
 {
-    private List<int> cards = new List<int>(52 * 2);
-    private int cardIndex = 0;
+    public CanastyController canastyController = null;
+
+    private List<byte> cards = new List<byte>(52 * 2);
+    private byte cardIndex = 0;
     private System.Random rng = new System.Random();
 
     public void Shuffle<T>(List<T> list)
@@ -21,11 +23,16 @@ public class DeckController : MonoBehaviour
         }
     }
 
-    public GameObject getNextCard(Vector3 position, Quaternion rotation)
+    public void updateDeck(List<byte> cards, byte cardIndex)
     {
-        int card = cards[cardIndex++];
-        int suit = (card / 13) % 4;
-        int suit_index = card % 13 + 1;
+        this.cards = cards;
+        this.cardIndex = cardIndex;
+    }
+
+    public static GameObject instantiateCard(int index)
+    {
+        int suit = (index / 13) % 4;
+        int suit_index = index % 13 + 1;
 
         string suit_name =
             (suit == 0) ? "Club" :
@@ -35,20 +42,41 @@ public class DeckController : MonoBehaviour
 
         string prefabPath = "Cards/Blue_PlayingCards_" + suit_name + suit_index.ToString("D2") + "_00";
         var cardObj = Instantiate(Resources.Load<GameObject>(prefabPath));
+        cardObj.name = "Card" + index.ToString();
+
+        // Physics
+        var rigidBody = cardObj.AddComponent<Rigidbody>();
+        rigidBody.isKinematic = true;
+
+        var collider = cardObj.AddComponent<BoxCollider>();
+        collider.size = new Vector3(5.7f, 0.5f, 8.9f);
+        collider.center = new Vector3(0, 0, 0);
+
+        return cardObj;
+    }
+
+    public GameObject getNextCard(Vector3 position, Quaternion rotation)
+    {
+        int index = cards[cardIndex++];
+        canastyController.OnDeckUpdate(cards, cardIndex);
+
+        var cardObj = instantiateCard(index);
+
         cardObj.transform.position = position;
         cardObj.transform.rotation = rotation;
-        cardObj.AddComponent<Rigidbody>();
-        var collider = cardObj.AddComponent<BoxCollider>();
-        collider.size = new Vector3(5.7f, 1.0f, 8.9f);
-        collider.center = new Vector3(0, 0, 0);
-        cardObj.AddComponent<SimpleGrabbable>();
-        cardObj.AddComponent<CardController>();
+
+        // Controllers
+        var grabbable = cardObj.AddComponent<SimpleGrabbable>();
+        var controller = cardObj.AddComponent<CardController>();
+        controller.grabbable = grabbable;
+        controller.canastyController = canastyController;
+
         return cardObj;
     }
 
     private void Awake()
     {
-        for (int i = 0; i < 52 * 2; i++)
+        for (byte i = 0; i < 52 * 2; i++)
             cards.Add(i);
         Shuffle(cards);
         cardIndex = 0;

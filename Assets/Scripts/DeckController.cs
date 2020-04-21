@@ -52,6 +52,11 @@ public class DeckController : MonoBehaviour
         collider.size = new Vector3(5.7f, 0.5f, 8.9f);
         collider.center = new Vector3(0, 0, 0);
 
+        // Controllers
+        var grabbable = cardObj.AddComponent<SimpleGrabbable>();
+        var controller = cardObj.AddComponent<CardController>();
+        controller.grabbable = grabbable;
+
         return cardObj;
     }
 
@@ -64,13 +69,8 @@ public class DeckController : MonoBehaviour
 
         cardObj.transform.position = position;
         cardObj.transform.rotation = rotation;
-
-        // Controllers
-        var grabbable = cardObj.AddComponent<SimpleGrabbable>();
-        var controller = cardObj.AddComponent<CardController>();
-        controller.grabbable = grabbable;
-        controller.canastyController = canastyController;
-
+        cardObj.transform.Rotate(0, 0, 180);  // Turn card face down
+        cardObj.transform.Translate(0, -0.0134f, 0);
         return cardObj;
     }
 

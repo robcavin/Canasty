@@ -99,7 +99,7 @@ public class CanastyController : MonoBehaviour
             remoteCardHands.Remove(userID);
         }
 
-        Destroy(remoteAvatars[userID]);
+        Destroy(remoteAvatars[userID].gameObject);
 
         return userID;
     }
@@ -221,6 +221,7 @@ public class CanastyController : MonoBehaviour
                             else
                             {
                                 localUser = logged_in_user_message.GetUser();
+                                localAvatar.oculusUserID = localUser.ID.ToString();
                                 Rooms.Join(roomID, true).OnComplete(OnRoomUpdateCallback);
                             }
                         });
@@ -350,25 +351,23 @@ public class CanastyController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        OVRInput.Update();
+        if (OVRInput.GetDown(OVRInput.RawButton.A) || Input.GetKeyDown(KeyCode.Space))
+        {
+            var caemraRig = GameObject.Find("OVRCameraRig");
+            caemraRig.transform.RotateAround(new Vector3(0, 0, 0), new Vector3(0, 1, 0), 90);
+        }
 
-        //if (testFrame == 0)
-        //{
-        //    var card = deckController.getNextCard(new Vector3(-0.2f, 2, 0), new Quaternion());
-        //    bool test = cardHandController.isCardInHand(card);
-        //    cardHandController.AddCard(card);
-        //}
-
-        //testFrame -= 1;
-
-        if (OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger) > 0.55)
+        if (OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger) > 0.55)
         {
             if ((rightHandHeld == null) && (rightHandGrabber.otherCollider != null))
             {
                 if (rightHandGrabber.otherCollider == deckCollider)
+                {
                     rightHandHeld = deckController.getNextCard(
                         deckController.transform.position,
                         deckController.transform.rotation);
+                }
+
                 else
                     rightHandHeld = rightHandGrabber.otherCollider.gameObject;
 
@@ -383,7 +382,7 @@ public class CanastyController : MonoBehaviour
             }
         }
 
-        if (OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger) < 0.35)
+        if (OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger) < 0.35)
         {
             if (rightHandHeld != null)
             {
@@ -394,7 +393,9 @@ public class CanastyController : MonoBehaviour
                 if ((rightHandHeld.GetComponent<CardController>() != null) && cardHandController.isHighlighting)
                     cardHandController.AddCard(rightHandHeld);
 
-                OnRigidBodyUpdate(rightHandHeld.GetComponent<Rigidbody>());
+                else 
+                    // Notify remote users that we are dropping the card
+                    OnRigidBodyUpdate(rightHandHeld.GetComponent<Rigidbody>());
 
                 rightHandHeld = null;
             }
@@ -444,6 +445,7 @@ public class CanastyController : MonoBehaviour
 
                         if (obj != null)
                         {
+                            obj.transform.parent = null;
                             var rigidBody = obj.GetComponent<Rigidbody>();
                             if (rigidBody) rigidBody.isKinematic = true;
                             obj.transform.position = objPosition;
@@ -502,15 +504,11 @@ public class CanastyController : MonoBehaviour
         foreach (var id in handsAttached) pendingLeftCardHandAttach.Remove(id);
     }
 
-    private void FixedUpdate()
-    {
-        OVRInput.FixedUpdate();
-    }
-
     [MonoPInvokeCallback(typeof(Oculus.Platform.CAPI.FilterCallback))]
     public static void MicrophoneFilterCallback(short[] pcmData, System.UIntPtr pcmDataLength, int frequency, int numChannels)
     {
-        localAvatar.UpdateVoiceData(pcmData, numChannels);
+        if (localAvatar != null)
+            localAvatar.UpdateVoiceData(pcmData, numChannels);
     }
 
     public void CloseConnectionsAndLeaveRoom()
@@ -526,6 +524,7 @@ public class CanastyController : MonoBehaviour
             Voip.Stop(user.ID);
         }
         Rooms.Leave(roomID);
+        userInRoom = false;
         room = null;
     }
 

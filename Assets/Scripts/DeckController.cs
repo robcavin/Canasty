@@ -4,11 +4,14 @@ using UnityEngine;
 
 public class DeckController : MonoBehaviour
 {
-    public CanastyController canastyController = null;
+    public CanastyController canastyController;
 
     private List<byte> cards = new List<byte>(52 * 2);
     private byte cardIndex = 0;
     private System.Random rng = new System.Random();
+
+    Vector3 originalPosition;
+    float deckHeight;
 
     public void Shuffle<T>(List<T> list)
     {
@@ -23,10 +26,33 @@ public class DeckController : MonoBehaviour
         }
     }
 
+    public void UpdateDeckVisibility()
+    {
+        if (cardIndex >= cards.Count)
+            gameObject.SetActive(false);
+
+        else
+        {
+            gameObject.SetActive(true);
+            float cardsCount = cards.Count;
+            transform.position = originalPosition + new Vector3(0, -(cardIndex / cardsCount) * deckHeight, 0);
+        }
+    }
+
     public void updateDeck(List<byte> cards, byte cardIndex)
     {
         this.cards = cards;
         this.cardIndex = cardIndex;
+
+        UpdateDeckVisibility();
+    }
+
+    public void reset()
+    {
+        Shuffle(cards);
+        this.cardIndex = 0;
+
+        UpdateDeckVisibility();
     }
 
     public static GameObject instantiateCard(int index)
@@ -43,6 +69,7 @@ public class DeckController : MonoBehaviour
         string prefabPath = "Cards/Blue_PlayingCards_" + suit_name + suit_index.ToString("D2") + "_00";
         var cardObj = Instantiate(Resources.Load<GameObject>(prefabPath));
         cardObj.name = "Card" + index.ToString();
+        cardObj.tag = "PlayingCard";
 
         // Physics
         var rigidBody = cardObj.AddComponent<Rigidbody>();
@@ -65,6 +92,8 @@ public class DeckController : MonoBehaviour
         int index = cards[cardIndex++];
         canastyController.OnDeckUpdate(cards, cardIndex);
 
+        UpdateDeckVisibility();
+
         var cardObj = instantiateCard(index);
 
         cardObj.transform.position = position;
@@ -86,6 +115,8 @@ public class DeckController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        originalPosition = transform.position;
+        deckHeight = gameObject.GetComponent<MeshFilter>().mesh.bounds.size.y * gameObject.transform.localScale.y;
     }
 
     // Update is called once per frame

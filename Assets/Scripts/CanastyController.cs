@@ -44,7 +44,8 @@ public class CanastyController : MonoBehaviour
         TRACKED_OBJECT_UPDATE,
         CARD_HAND_UPDATE,
         DECK_UPDATE,
-        RIGID_BODY_UPDATE
+        RIGID_BODY_UPDATE,
+        RESET
     }
 
     private bool ShouldOwnConnection(ulong userID)
@@ -193,18 +194,6 @@ public class CanastyController : MonoBehaviour
 
         cardHandController = leftHandAnchor.GetComponent<CardHandController>();
 
-        Rooms.SetUpdateNotificationCallback(OnRoomUpdateCallback);
-        Net.SetConnectionStateChangedCallback(OnConnectionStateChangedCallback);
-        Voip.SetVoipConnectRequestCallback(OnVoipConnectRequestCallback);
-        Voip.SetVoipStateChangeCallback(OnVoipStateChangedCallback);
-        Voip.SetMicrophoneFilterCallback(MicrophoneFilterCallback);
-
-        localAvatar = GameObject.Find("LocalAvatar").GetComponent<OvrAvatar>();
-        localAvatar.CanOwnMicrophone = false;
-        localAvatar.UseSDKPackets = true;
-        localAvatar.RecordPackets = true;
-        localAvatar.PacketRecorded += OnLocalAvatarPacketRecorded;
-
         Core.AsyncInitialize(appID.ToString()).OnComplete((Message<Oculus.Platform.Models.PlatformInitialize> init_message) =>
         {
             if (init_message.IsError) Debug.LogError("Failed to initialize - " + init_message);
@@ -221,7 +210,22 @@ public class CanastyController : MonoBehaviour
                             else
                             {
                                 localUser = logged_in_user_message.GetUser();
+
+                                localAvatar = GameObject.Find("LocalAvatar").GetComponent<OvrAvatar>();
+                                localAvatar.CanOwnMicrophone = false;
+                                localAvatar.UseSDKPackets = true;
+                                localAvatar.RecordPackets = true;
+                                localAvatar.PacketRecorded += OnLocalAvatarPacketRecorded;
                                 localAvatar.oculusUserID = localUser.ID.ToString();
+
+                                Rooms.SetUpdateNotificationCallback(OnRoomUpdateCallback);
+                                Net.SetConnectionStateChangedCallback(OnConnectionStateChangedCallback);
+                                Voip.SetVoipConnectRequestCallback(OnVoipConnectRequestCallback);
+                                Voip.SetVoipStateChangeCallback(OnVoipStateChangedCallback);
+
+                                // NOTE - Setting this before the platform is initialized does NOT WORK!!
+                                Voip.SetMicrophoneFilterCallback(MicrophoneFilterCallback);
+
                                 Rooms.Join(roomID, true).OnComplete(OnRoomUpdateCallback);
                             }
                         });
@@ -231,6 +235,20 @@ public class CanastyController : MonoBehaviour
         });
     }
 
+    void resetGame()
+    {
+        deckController.reset();
+        cardHandController.reset();
+        foreach (var hand in remoteCardHands.Values)
+            hand.reset();
+
+        trackedObjects.Clear();
+        rightHandHeld = null;
+
+        var cards = GameObject.FindGameObjectsWithTag("PlayingCard");
+        foreach (var card in cards)
+            Destroy(card);
+    }
 
     // Handle object updates
     //
@@ -286,7 +304,7 @@ public class CanastyController : MonoBehaviour
     {
         if (!userInRoom) return;
 
-        using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(256)))
+        using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(64)))
         {
             binaryWriter.Write((byte)PacketType.TRACKED_OBJECT_UPDATE);
             binaryWriter.Write(localUser.ID);
@@ -306,7 +324,7 @@ public class CanastyController : MonoBehaviour
         foreach (var card in cards)
             cardIds.Add(byte.Parse(card.name.Substring(4)));
 
-        using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(256)))
+        using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(128)))
         {
             binaryWriter.Write((byte)PacketType.CARD_HAND_UPDATE);
             binaryWriter.Write(localUser.ID);
@@ -319,7 +337,7 @@ public class CanastyController : MonoBehaviour
 
     public void OnRigidBodyUpdate(Rigidbody rigidBody)
     {
-        using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(256)))
+        using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(64)))
         {
             binaryWriter.Write((byte)PacketType.RIGID_BODY_UPDATE);
             binaryWriter.Write(localUser.ID);
@@ -328,6 +346,18 @@ public class CanastyController : MonoBehaviour
             binaryWriter.Write(rigidBody.rotation);
             Net.SendPacketToCurrentRoom(((MemoryStream)binaryWriter.BaseStream).ToArray(), SendPolicy.Unreliable);
         }
+    }
+
+    public void OnReset()
+    {
+        using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(64)))
+        {
+            binaryWriter.Write((byte)PacketType.RESET);
+            binaryWriter.Write(localUser.ID);
+            Net.SendPacketToCurrentRoom(((MemoryStream)binaryWriter.BaseStream).ToArray(), SendPolicy.Unreliable);
+        }
+
+        resetGame();
     }
 
     private GameObject getTrackedObject(string name)
@@ -480,6 +510,11 @@ public class CanastyController : MonoBehaviour
                             rigidObj.GetComponent<Rigidbody>().isKinematic = false;
                         }
                         break;
+
+                    case PacketType.RESET:
+                        resetGame();
+                        break;
+
                 }
             }
         }

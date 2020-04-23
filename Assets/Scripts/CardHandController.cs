@@ -191,4 +191,10 @@ public class CardHandController : MonoBehaviour
 
         updateCardRotations(0);
     }
+
+    public void reset()
+    {
+        cards.Clear();
+        cardCache.Clear();
+    }
 }

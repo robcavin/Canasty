@@ -55,6 +55,11 @@ public class DeckController : MonoBehaviour
         UpdateDeckVisibility();
     }
 
+    public void SendUpdate()
+    {
+        canastyController.OnDeckUpdate(cards, cardIndex);
+    }
+
     public static GameObject instantiateCard(int index)
     {
         int suit = (index / 13) % 4;

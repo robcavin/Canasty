@@ -165,7 +165,7 @@ PlayerSettings:
   applicationIdentifier:
     Android: com.Tabbysoft.Canasty
   buildNumber: {}
-  AndroidBundleVersionCode: 6
+  AndroidBundleVersionCode: 10
   AndroidMinSdkVersion: 23
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 0
@@ -761,10 +761,10 @@ PlayerSettings:
     m_VersionCode: 1
     m_VersionName: 
   apiCompatibilityLevel: 6
-  cloudProjectId: 
+  cloudProjectId: cf9cc03d-be82-49bc-b4bd-8ab763228c04
   framebufferDepthMemorylessMode: 0
-  projectName: 
-  organizationId: 
+  projectName: Canasty
+  organizationId: robcavinfb
   cloudEnabled: 0
   enableNativePlatformBackendsForNewInputSystem: 0
   disableOldInputManagerSupport: 0

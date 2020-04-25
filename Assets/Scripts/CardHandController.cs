@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Unity.Cloud.UserReporting;
+using Unity.Cloud.UserReporting.Plugin;
 using UnityEngine;
 
 public class CardHandController : MonoBehaviour
@@ -47,8 +49,24 @@ public class CardHandController : MonoBehaviour
         var z_delta = new Vector3(0.0f, 0.0f, 0.001f);
         var z_offset = new Vector3(0.0f, 0.0f, 0.0f);
 
+        List<GameObject> deadCards = new List<GameObject>();
+
         foreach (var card in cards)
         {
+            if (card == null)
+            {
+                deadCards.Add(card);
+                UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Warning, "Card disappeared from hand");
+                continue;
+            }
+
+            if (card.transform.parent != transform)
+            {
+                deadCards.Add(card);
+                UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Warning, "Card removed from hand");
+                continue;
+            }
+
             var angleSpread = highlightStrength * spreadFunc(cardAngle, highlight, 10);
             var accentHeight = 0.02f * highlightStrength * hightlightFunc(cardAngle, highlight, 5);
 
@@ -60,6 +78,9 @@ public class CardHandController : MonoBehaviour
             z_offset += z_delta;
             cardAngle += angularSeparation;
         }
+
+        foreach (var card in deadCards)
+            cards.Remove(card);
     }
 
     public void AddCard(GameObject card)
@@ -196,5 +217,10 @@ public class CardHandController : MonoBehaviour
     {
         cards.Clear();
         cardCache.Clear();
+    }
+
+    public void SendUpdate()
+    {
+        canastyController.OnCardHandUpdate(cards);
     }
 }

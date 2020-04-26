@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Unity.Cloud.UserReporting;
 using Unity.Cloud.UserReporting.Client;
 using Unity.Cloud.UserReporting.Plugin;
@@ -36,9 +37,33 @@ public class CanastyController : MonoBehaviour
     private ulong roomID = 755036931694010;
     private User localUser = null;
 
+    public enum ConnectionState {
+        Disconnected,
+        Connecting,
+        Reconnecting,
+        Connected,
+        Disconnecting,
+    }
+
+    public class ConnectionStates
+    {
+        public string username;
+        public bool netState;
+        public int netTimeouts;
+        public int netReconnects;
+        public int voipTimeouts;
+        public int voipReconnects;
+        public ulong ping;
+        public int pingTimeout;
+        public ConnectionState networkState;
+        public ConnectionState voipState;
+    }
+
     // These need to be cleared on leaving the room
     private bool userInRoom = false;
     private Room room = null;
+    public Dictionary<ulong, ConnectionStates> remoteConnectionStates = new Dictionary<ulong, ConnectionStates>();
+
     private Dictionary<ulong, OvrAvatar> remoteAvatars = new Dictionary<ulong, OvrAvatar>();
     private Dictionary<ulong, CardHandController> remoteCardHands = new Dictionary<ulong, CardHandController>();
     private List<ulong> pendingMouthAnchorAttach = new List<ulong>();
@@ -48,6 +73,8 @@ public class CanastyController : MonoBehaviour
 
     private uint avatarSequence = 0;
     private Dictionary<string, GameObject> trackedObjects = new Dictionary<string, GameObject>();
+
+    private float lastPingTime = 0;
 
     public enum PacketType : byte
     {
@@ -65,62 +92,92 @@ public class CanastyController : MonoBehaviour
         return userID < localUser.ID;
     }
 
+    public string GetUsernameForID(ulong userID)
+    {
+        string username = null;
+        if (room != null)
+            foreach (var user in room.UsersOptional)
+                if (user.ID == userID)
+                    username = user.OculusID;
+
+        return username;
+    }
+
     // When someone joins or leaves, do add or remove
     private void OnRoomUpdateCallback(Message<Room> message)
     {
         if (message.IsError)
-        {
-            Debug.LogError("Connection state error - " + message.GetError().Message);
-            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Error, "Room connecton error - " + message.GetError().Message);
-        }
+            Debug.LogError("Room connecton error - " + message.GetError().Message);
         else
         {
             room = message.GetRoom();
 
-            bool userHasLatestState = userInRoom;
+            StringBuilder roomMessage = new StringBuilder("Room update - ");
+
+            bool userNeedsStateUpdate = !userInRoom;
             foreach (var user in room.UsersOptional)
             {
+                roomMessage.Append(user.OculusID + " ");
+
                 if (user.ID == localUser.ID)
                 {
                     if (!userInRoom)
                     {
                         userInRoom = true;
-                        Net.AcceptForCurrentRoom();
                         UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "User joined room");
                     }
                 }
                 else
                 {
-                    // If someone was in the room before us, ask for the state
-                    // once we connect.
-                    if (!userHasLatestState)
-                    {
-                        if (Net.IsConnected(user.ID))
-                            OnRequestStateUpate(user.ID);
-                        else
-                        {
-                            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "State update request pending");
-                            pendingStateUpdateRequest = true;
-                        }
-
-                        userHasLatestState = true;
-                    }
+                    if (!remoteConnectionStates.ContainsKey(user.ID))
+                        remoteConnectionStates.Add(user.ID, new ConnectionStates() { username = user.OculusID });
 
                     if (ShouldOwnConnection(user.ID))
                     {
                         UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Initiating net and voip to " + user.ID.ToString());
-                        if (!Net.IsConnected(user.ID))
+
+                        // Network state
+                        if (remoteConnectionStates[user.ID].networkState == ConnectionState.Disconnected)
+                        {
                             Net.Connect(user.ID);
+                            remoteConnectionStates[user.ID].networkState = ConnectionState.Connecting;
+                        }
                         else
                             UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Skipping net connection since already connected to " + user.ID.ToString());
 
-                        Voip.Start(user.ID);
+                        // VOIP state
+                        if (remoteConnectionStates[user.ID].voipState == ConnectionState.Disconnected)
+                        {
+                            Voip.Start(user.ID);
+                            remoteConnectionStates[user.ID].voipState = ConnectionState.Connecting;
+                        }
+                        else
+                            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Skipping net connection since already connected to " + user.ID.ToString());
                     }
                     else
                     {
                         UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Skipping since don't own connection to " + user.ID.ToString());
                     }
+
+                    // If someone was in the room before us, ask for the state
+                    // once we connect.
+                    if (userNeedsStateUpdate)
+                    {
+                        if (remoteConnectionStates[user.ID].networkState == ConnectionState.Connected) //Net.IsConnected(user.ID))
+                            OnRequestStateUpate(user.ID);
+
+                        userNeedsStateUpdate = false;
+                    }
+
                 }
+            }
+
+            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, roomMessage.ToString());
+
+            if (userNeedsStateUpdate)
+            {
+                UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "State update request pending");
+                pendingStateUpdateRequest = true;
             }
         }
     }
@@ -167,17 +224,22 @@ public class CanastyController : MonoBehaviour
     void OnConnectionStateChangedCallback(Message<NetworkingPeer> message)
     {
         if (message.IsError)
-        {
-            Debug.LogError("Connection state error - " + message);
-            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Error, "Net connecton error - " + message.GetError().Message);
-        }
+            Debug.LogError("Net connecton error - " + message.GetError().Message);
         else
         {
             NetworkingPeer peer = message.GetNetworkingPeer();
+
+            if (!remoteConnectionStates.ContainsKey(peer.ID))
+                remoteConnectionStates.Add(peer.ID, new ConnectionStates() { username = peer.ID.ToString() });
+
             switch (peer.State)
             {
                 case PeerConnectionState.Connected:
-                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net connected to " + peer.ID.ToString());
+                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net connected to " + peer.ID.ToString() + 
+                        ". State was " + remoteConnectionStates[peer.ID].networkState.ToString());
+
+                    remoteConnectionStates[peer.ID].networkState = ConnectionState.Connected;
+
                     if (!remoteAvatars.ContainsKey(peer.ID))
                         remoteAvatars.Add(peer.ID, createAvatar(peer.ID));
 
@@ -185,19 +247,56 @@ public class CanastyController : MonoBehaviour
                         OnRequestStateUpate(peer.ID);
 
                     break;
+
                 case PeerConnectionState.Timeout:
-                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net timeout for " + peer.ID.ToString());
-                    if (IsUserInRoom(peer.ID) && ShouldOwnConnection(peer.ID))
+
+                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net timeout for " + peer.ID.ToString() + 
+                        ". State was " + remoteConnectionStates[peer.ID].networkState.ToString());
+
+                    if (IsUserInRoom(peer.ID))
                     {
-                        UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net attempting reconnect to " + peer.ID.ToString());
-                        Net.Connect(peer.ID);
+                        if (ShouldOwnConnection(peer.ID))
+                        {
+                            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, 
+                                "Net attempting reconnect to " + peer.ID.ToString() +
+                                ". Attempt # " + remoteConnectionStates[peer.ID].netTimeouts+ 
+                                ". State was " + remoteConnectionStates[peer.ID].networkState.ToString());
+                            Net.Connect(peer.ID);
+                            remoteConnectionStates[peer.ID].networkState = ConnectionState.Connecting;
+                            remoteConnectionStates[peer.ID].netTimeouts += 1;
+                        }
                     }
+                    else
+                        remoteConnectionStates[peer.ID].networkState = ConnectionState.Disconnected;
+
                     break;
+
                 case PeerConnectionState.Closed:
-                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net disconnect from " + peer.ID.ToString());
+
+                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net disconnect from " + peer.ID.ToString()+
+                        ". State was " + remoteConnectionStates[peer.ID].networkState.ToString());
+
+                    if (IsUserInRoom(peer.ID))
+                    {
+                        if (ShouldOwnConnection(peer.ID))
+                        {
+                            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, 
+                                "Net attempting reconnect to " + peer.ID.ToString() +
+                                ". Reconnect # " + remoteConnectionStates[peer.ID].netReconnects +
+                                ". State was " + remoteConnectionStates[peer.ID].networkState.ToString());
+                            Net.Connect(peer.ID);
+                            remoteConnectionStates[peer.ID].networkState = ConnectionState.Reconnecting;
+                            remoteConnectionStates[peer.ID].netReconnects += 1;
+                        }
+                    }
+                    else
+                        remoteConnectionStates[peer.ID].networkState = ConnectionState.Disconnected;
+
                     if (remoteAvatars.ContainsKey(peer.ID))
                         remoteAvatars.Remove(destroyAvatar(peer.ID));
+
                     break;
+
                 default:
                     UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Warning, "Net unexpected state from " + peer.ID.ToString());
                     Debug.LogError("Unexpected connection state");
@@ -209,35 +308,77 @@ public class CanastyController : MonoBehaviour
     void OnVoipStateChangedCallback(Message<NetworkingPeer> message)
     {
         if (message.IsError)
-        {
-            Debug.LogError("Error on voip update " + message.ToString());
-            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Error, "Voip connecton error - " + message.GetError().Message);
-        }
+            Debug.LogError("Voip connecton error - " + message.GetError().Message);
         else
         {
             NetworkingPeer peer = message.GetNetworkingPeer();
+
+            if (!remoteConnectionStates.ContainsKey(peer.ID))
+                remoteConnectionStates.Add(peer.ID, new ConnectionStates());
+
             switch (peer.State)
             {
                 case PeerConnectionState.Connected:
-                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip connected to " + peer.ID.ToString());
+                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip connected to " + peer.ID.ToString() +
+                        ". State was " + remoteConnectionStates[peer.ID].voipState.ToString());
+
+                    remoteConnectionStates[peer.ID].voipState = ConnectionState.Connected;
+
                     if (!pendingMouthAnchorAttach.Contains(peer.ID))
                         pendingMouthAnchorAttach.Add(peer.ID); // Annoyingly mouth anchor isn't populated until first update
+
                     break;
+
                 case PeerConnectionState.Timeout:
-                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip timeout for " + peer.ID.ToString());
-                    if (IsUserInRoom(peer.ID) && ShouldOwnConnection(peer.ID))
+
+                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip timeout for " + peer.ID.ToString() +
+                        ". State was " + remoteConnectionStates[peer.ID].voipState.ToString());
+
+                    if (IsUserInRoom(peer.ID))
                     {
-                        UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip attempting reconnect to " + peer.ID.ToString());
-                        Voip.Start(peer.ID);
+                        if (ShouldOwnConnection(peer.ID))
+                        {
+                            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, 
+                                "Voip attempting reconnect to " + peer.ID.ToString() +
+                                ". Attempt # " + remoteConnectionStates[peer.ID].voipTimeouts +
+                                ". State was " + remoteConnectionStates[peer.ID].voipState.ToString());
+                            Voip.Start(peer.ID);
+                            remoteConnectionStates[peer.ID].voipState = ConnectionState.Connecting;
+                            remoteConnectionStates[peer.ID].voipTimeouts += 1;
+                        }
                     }
+                    else
+                        remoteConnectionStates[peer.ID].voipState = ConnectionState.Disconnected;
                     break;
+
                 case PeerConnectionState.Closed:
-                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip disconnect from " + peer.ID.ToString());
+                    UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip disconnect from " + peer.ID.ToString() +
+                        ". State was " + remoteConnectionStates[peer.ID].voipState.ToString());
+
+                    if (IsUserInRoom(peer.ID))
+                    {
+                        if (ShouldOwnConnection(peer.ID))
+                        {
+                            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, 
+                                "Voip attempting reconnect to " + peer.ID.ToString() +
+                                ". Reconnect # " + remoteConnectionStates[peer.ID].voipReconnects +
+                                ". State was " + remoteConnectionStates[peer.ID].voipState.ToString());
+                            Voip.Start(peer.ID);
+                            remoteConnectionStates[peer.ID].voipState = ConnectionState.Reconnecting;
+                            remoteConnectionStates[peer.ID].voipReconnects += 1;
+                        }
+                    }
+                    else
+                        remoteConnectionStates[peer.ID].voipState = ConnectionState.Disconnected;
+
                     if (remoteAvatars.ContainsKey(peer.ID) &&
                         (remoteAvatars[peer.ID].MouthAnchor != null))
                         Destroy(remoteAvatars[peer.ID].MouthAnchor.GetComponent<VoipAudioSourceHiLevel>());
+
                     pendingMouthAnchorAttach.Remove(peer.ID);
+
                     break;
+
                 default:
                     UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Warning, "Voip unexpected state from " + peer.ID.ToString());
                     Debug.LogError("Unexpected connection state");
@@ -258,19 +399,64 @@ public class CanastyController : MonoBehaviour
         }
     }
 
-    // No auto accept for VOIP?
-    void OnVoipConnectRequestCallback(Message<NetworkingPeer> msg)
+
+    void OnConnectRequestCallback(Message<NetworkingPeer> msg)
     {
         if (msg.IsError)
-        {
-            Debug.LogError("Error on voip connect requeest " + msg.ToString());
-            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Error, "Voip connecton error - " + msg.GetError().Message);
-        }
+            Debug.LogError("Net connecton error - " + msg.GetError().Message);
         else
         {
             var peer = msg.GetNetworkingPeer();
+
+            if (!remoteConnectionStates.ContainsKey(peer.ID))
+                remoteConnectionStates.Add(peer.ID, new ConnectionStates());
+
+            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Net accept of " + peer.ID.ToString() + 
+                ".  State was " + remoteConnectionStates[peer.ID].networkState.ToString());
+
+            Net.Accept(peer.ID);
+            remoteConnectionStates[peer.ID].networkState = ConnectionState.Connecting;
+        }
+    }
+
+
+    void OnVoipConnectRequestCallback(Message<NetworkingPeer> msg)
+    {
+        if (msg.IsError)
+            Debug.LogError("Voip connecton error - " + msg.GetError().Message);
+        else
+        {
+            var peer = msg.GetNetworkingPeer();
+
+            if (!remoteConnectionStates.ContainsKey(peer.ID))
+                remoteConnectionStates.Add(peer.ID, new ConnectionStates());
+
+            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip accept of " + peer.ID.ToString() +
+                ".  State was " + remoteConnectionStates[peer.ID].voipState.ToString());
+
             Voip.Accept(peer.ID);
-            UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Voip accept of " + peer.ID.ToString());
+            remoteConnectionStates[peer.ID].voipState = ConnectionState.Connecting;
+        }
+    }
+
+
+    void OnPingResultCallback(Message<PingResult> msg)
+    {
+        if (msg.IsError)
+            Debug.LogError("Ping error - " + msg.GetError().Message);
+        else
+        {
+            var pingResult = msg.GetPingResult();
+
+            if (!remoteConnectionStates.ContainsKey(pingResult.ID))
+                remoteConnectionStates.Add(pingResult.ID, new ConnectionStates());
+
+            if (pingResult.IsTimeout) remoteConnectionStates[pingResult.ID].pingTimeout += 1;
+            else
+            {
+                remoteConnectionStates[pingResult.ID].ping = pingResult.PingTimeUsec;
+                remoteConnectionStates[pingResult.ID].pingTimeout = 0;
+            }
         }
     }
 
@@ -322,6 +508,8 @@ public class CanastyController : MonoBehaviour
 
                                 Rooms.SetUpdateNotificationCallback(OnRoomUpdateCallback);
                                 Net.SetConnectionStateChangedCallback(OnConnectionStateChangedCallback);
+                                Net.SetPeerConnectRequestCallback(OnConnectRequestCallback);
+                                Net.SetPingResultNotificationCallback(OnPingResultCallback);
                                 Voip.SetVoipConnectRequestCallback(OnVoipConnectRequestCallback);
                                 Voip.SetVoipStateChangeCallback(OnVoipStateChangedCallback);
 
@@ -400,7 +588,7 @@ public class CanastyController : MonoBehaviour
             return;
         }
 
-        UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Broadcast - deck update");
+        UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Broadcast - deck update - Card index " + cardIndex);
         using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(256)))
         {
             binaryWriter.Write((byte)PacketType.DECK_UPDATE);
@@ -493,57 +681,85 @@ public class CanastyController : MonoBehaviour
         return obj;
     }
 
+    bool ReadyToPlay()
+    {
+        if (room == null)
+            return false;
+
+        bool allUsersInRoomAreConnected = true;
+        foreach (var user in room.UsersOptional)
+        {
+            if (!remoteConnectionStates.ContainsKey(user.ID) ||
+                remoteConnectionStates[user.ID].networkState != ConnectionState.Connected)
+                allUsersInRoomAreConnected = false;
+        }
+
+        return allUsersInRoomAreConnected && !pendingStateUpdateRequest;
+    }
 
     // Update is called once per frame
     void Update()
     {
+        // Ping everyone every 5 seconds
+        float now = Time.time;
+        if((Time.time - lastPingTime) > 5)
+        {
+            foreach (var connection in remoteConnectionStates)
+                if (connection.Value.networkState == ConnectionState.Connected)
+                    Net.Ping(connection.Key);
+            lastPingTime = now;
+        }
+
         if (OVRInput.GetDown(OVRInput.RawButton.B) || Input.GetKeyDown(KeyCode.Space))
         {
             var caemraRig = GameObject.Find("OVRCameraRig");
             caemraRig.transform.RotateAround(new Vector3(0, 0, 0), new Vector3(0, 1, 0), 90);
         }
 
-        if (OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger) > 0.55)
+        if (ReadyToPlay())
         {
-            if ((rightHandHeld == null) && (rightHandGrabber.otherCollider != null))
+            if (OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger) > 0.55)
             {
-                if (rightHandGrabber.otherCollider == deckCollider)
+                if ((rightHandHeld == null) && (rightHandGrabber.otherCollider != null))
                 {
-                    rightHandHeld = deckController.getNextCard(
-                        deckController.transform.position,
-                        deckController.transform.rotation);
+                    if (rightHandGrabber.otherCollider == deckCollider)
+                    {
+                        rightHandHeld = deckController.getNextCard(
+                            deckController.transform.position,
+                            deckController.transform.rotation);
+                    }
+
+                    else
+                        rightHandHeld = rightHandGrabber.otherCollider.gameObject;
+
+                    // Might not be in the hand, but it's as costly to check and no harm in trying
+                    if (cardHandController.isCardInHand(rightHandHeld))
+                        cardHandController.ReleaseCard(rightHandHeld);
+
+                    rightHandHeld.transform.parent = rightHandAnchor.transform;
+                    rightHandHeld.GetComponent<Rigidbody>().isKinematic = true;
+
+                    rightHandHeld.GetComponent<SimpleGrabbable>().isGrabbed = true;
                 }
-
-                else
-                    rightHandHeld = rightHandGrabber.otherCollider.gameObject;
-
-                // Might not be in the hand, but it's as costly to check and no harm in trying
-                if (cardHandController.isCardInHand(rightHandHeld))
-                    cardHandController.ReleaseCard(rightHandHeld);
-
-                rightHandHeld.transform.parent = rightHandAnchor.transform;
-                rightHandHeld.GetComponent<Rigidbody>().isKinematic = true;
-
-                rightHandHeld.GetComponent<SimpleGrabbable>().isGrabbed = true;
             }
-        }
 
-        if (OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger) < 0.35)
-        {
-            if (rightHandHeld != null)
+            if (OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger) < 0.35)
             {
-                rightHandHeld.transform.parent = null;
-                rightHandHeld.GetComponent<Rigidbody>().isKinematic = false;
-                rightHandHeld.GetComponent<SimpleGrabbable>().isGrabbed = false;
+                if (rightHandHeld != null)
+                {
+                    rightHandHeld.transform.parent = null;
+                    rightHandHeld.GetComponent<Rigidbody>().isKinematic = false;
+                    rightHandHeld.GetComponent<SimpleGrabbable>().isGrabbed = false;
 
-                if ((rightHandHeld.GetComponent<CardController>() != null) && cardHandController.isHighlighting)
-                    cardHandController.AddCard(rightHandHeld);
+                    if ((rightHandHeld.GetComponent<CardController>() != null) && cardHandController.isHighlighting)
+                        cardHandController.AddCard(rightHandHeld);
 
-                else 
-                    // Notify remote users that we are dropping the card
-                    OnRigidBodyUpdate(rightHandHeld.GetComponent<Rigidbody>());
+                    else
+                        // Notify remote users that we are dropping the card
+                        OnRigidBodyUpdate(rightHandHeld.GetComponent<Rigidbody>());
 
-                rightHandHeld = null;
+                    rightHandHeld = null;
+                }
             }
         }
 
@@ -660,6 +876,7 @@ public class CanastyController : MonoBehaviour
             }
         }
 
+
         var mouthsAttached = new List<ulong>();
         foreach (var id in pendingMouthAnchorAttach)
             if (remoteAvatars.ContainsKey(id) && remoteAvatars[id].MouthAnchor != null)
@@ -675,6 +892,7 @@ public class CanastyController : MonoBehaviour
                 mouthsAttached.Add(id);
             }
         foreach (var id in mouthsAttached) pendingMouthAnchorAttach.Remove(id);
+
 
         var handsAttached = new List<ulong>();
         foreach (var id in pendingLeftCardHandAttach)
@@ -704,6 +922,7 @@ public class CanastyController : MonoBehaviour
             pendingCardHandUpdates.Remove(id);
         }
 
+
         // Update unity user reporting
         reportingUpdater.Reset();
         this.StartCoroutine(this.reportingUpdater);
@@ -716,6 +935,7 @@ public class CanastyController : MonoBehaviour
             localAvatar.UpdateVoiceData(pcmData, numChannels);
     }
 
+
     public void CloseConnectionsAndLeaveRoom()
     {
         foreach (var key in remoteAvatars.Keys)
@@ -727,20 +947,26 @@ public class CanastyController : MonoBehaviour
         pendingCardHandUpdates.Clear();
         pendingStateUpdateRequest = false;
 
-        if (room != null)
-        {
-            foreach (var user in room.UsersOptional)
-            {
-                Net.Close(user.ID);
-                Voip.Stop(user.ID);
-            }
-        }
-
         Rooms.Leave(roomID);
         userInRoom = false;
         room = null;
-
         UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "User left room");
+
+        foreach (var connection in remoteConnectionStates) { 
+            if (!(connection.Value.networkState == ConnectionState.Disconnecting ||
+                connection.Value.networkState == ConnectionState.Disconnected))
+            {
+                Net.Close(connection.Key);
+                remoteConnectionStates[connection.Key].networkState = ConnectionState.Disconnecting;
+            }
+
+            if (!(connection.Value.voipState == ConnectionState.Disconnecting ||
+                connection.Value.voipState == ConnectionState.Disconnected))
+            {
+                Voip.Stop(connection.Key);
+                remoteConnectionStates[connection.Key].voipState = ConnectionState.Disconnecting;
+            }
+        }
     }
 
     public void OnApplicationPause(bool pause)

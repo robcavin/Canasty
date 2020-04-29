@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Oculus.Platform;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Cloud.UserReporting;
 using Unity.Cloud.UserReporting.Plugin;
@@ -219,8 +220,44 @@ public class CardHandController : MonoBehaviour
         cardCache.Clear();
     }
 
-    public void SendUpdate()
+    public void SendUpdate(SendPolicy policy = SendPolicy.Unreliable)
     {
-        canastyController.OnCardHandUpdate(cards);
+        canastyController.OnCardHandUpdate(cards, policy);
+    }
+
+    private class CardComparer : IComparer<KeyValuePair<int,GameObject>>
+    {
+        public int Compare(KeyValuePair<int, GameObject> a, KeyValuePair<int, GameObject> b)
+        {
+            return a.Key < b.Key ? 1 : a.Key == b.Key ? 0 : -1;
+        }
+    }
+
+    public void SortCards()
+    {
+        List<KeyValuePair<int, GameObject>> sortList = new List<KeyValuePair<int, GameObject>>(cards.Count);
+
+        foreach (var card in cards)
+        {
+            var index = int.Parse(card.name.Substring(4));
+
+            if (index < 52 * 2)
+            {
+                int suit = (index / 13) % 4;
+                int suit_index = index % 13 + 1;
+
+                sortList.Add(new KeyValuePair<int, GameObject>(suit_index * 4 + suit, card));
+
+            }
+            else sortList.Add(new KeyValuePair<int, GameObject>(index, card));
+        }
+
+        sortList.Sort(new CardComparer());
+
+        cards = new LinkedList<GameObject>();
+        foreach (var card in sortList)
+            cards.AddLast(card.Value);
+
+        updateCardRotations(highlightAngle);
     }
 }

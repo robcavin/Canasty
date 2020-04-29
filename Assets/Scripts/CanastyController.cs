@@ -31,6 +31,7 @@ public class CanastyController : MonoBehaviour
 
     UnityUserReportingUpdater reportingUpdater = new UnityUserReportingUpdater();
 
+    public OvrAvatar localAvatarPrefab = null;
     public OvrAvatar remoteAvatarPrefab = null;
 
     private string appID = "2850434391711779";
@@ -465,8 +466,7 @@ public class CanastyController : MonoBehaviour
     void Start()
     {
         UserReportingClientConfiguration config = new UserReportingClientConfiguration(500, 300, 60, 10);
-        if (UnityUserReporting.CurrentClient == null)
-            UnityUserReporting.Configure(config);
+        UnityUserReporting.Configure(config);
 
         rightHandAnchor = GameObject.Find("RightHandAnchor");
         leftHandAnchor = GameObject.Find("LeftHandAnchor");
@@ -500,12 +500,17 @@ public class CanastyController : MonoBehaviour
                                 UnityUserReporting.CurrentClient.AddDeviceMetadata("userID", localUser.ID.ToString());
                                 UnityUserReporting.CurrentClient.AddDeviceMetadata("username", localUser.OculusID);
 
-                                localAvatar = GameObject.Find("LocalAvatar").GetComponent<OvrAvatar>();
+                                localAvatar = Instantiate(localAvatarPrefab);
                                 localAvatar.CanOwnMicrophone = false;
                                 localAvatar.UseSDKPackets = true;
                                 localAvatar.RecordPackets = true;
                                 localAvatar.PacketRecorded += OnLocalAvatarPacketRecorded;
                                 localAvatar.oculusUserID = localUser.ID.ToString();
+
+                                var trackingSpace = GameObject.Find("TrackingSpace");
+                                localAvatar.transform.position = trackingSpace.transform.position;
+                                localAvatar.transform.rotation = trackingSpace.transform.rotation;
+                                localAvatar.transform.parent = trackingSpace.transform;
 
                                 Rooms.SetUpdateNotificationCallback(OnRoomUpdateCallback);
                                 Net.SetConnectionStateChangedCallback(OnConnectionStateChangedCallback);
@@ -589,7 +594,7 @@ public class CanastyController : MonoBehaviour
         }
     }
 
-    public void OnDeckUpdate(List<byte> cards, int cardIndex)
+    public void OnDeckUpdate(List<byte> cards, int cardIndex, SendPolicy policy = SendPolicy.Reliable)
     {
         if (!userInRoom)
         {
@@ -607,12 +612,12 @@ public class CanastyController : MonoBehaviour
             binaryWriter.Write((byte)cardIndex);
             binaryWriter.Write(cards.ToArray());
 
-            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), SendPolicy.Reliable);
+            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), policy);
         }
     }
 
 
-    public void OnTrackedObjectUpdate(GameObject obj)
+    public void OnTrackedObjectUpdate(GameObject obj, SendPolicy policy = SendPolicy.Unreliable)
     {
         if (!userInRoom) return;
 
@@ -624,11 +629,11 @@ public class CanastyController : MonoBehaviour
             binaryWriter.Write(obj.transform.position);
             binaryWriter.Write(obj.transform.rotation);
 
-            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), SendPolicy.Unreliable);
+            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), policy);
         }
     }
 
-    public void OnCardHandUpdate(LinkedList<GameObject> cards)
+    public void OnCardHandUpdate(LinkedList<GameObject> cards, SendPolicy policy = SendPolicy.Unreliable)
     {
         if (!userInRoom) return;
 
@@ -644,11 +649,11 @@ public class CanastyController : MonoBehaviour
             binaryWriter.Write((byte)cardIds.Count);
             binaryWriter.Write(cardIds.ToArray());
 
-            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), SendPolicy.Unreliable);
+            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), policy);
         }
     }
 
-    public void OnRigidBodyUpdate(Rigidbody rigidBody)
+    public void OnRigidBodyUpdate(Rigidbody rigidBody, SendPolicy policy = SendPolicy.Unreliable)
     {
         using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(64)))
         {
@@ -657,21 +662,51 @@ public class CanastyController : MonoBehaviour
             binaryWriter.Write(rigidBody.gameObject.name);
             binaryWriter.Write(rigidBody.position);
             binaryWriter.Write(rigidBody.rotation);
-            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), SendPolicy.Unreliable);
+            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), policy);
         }
     }
 
-    public void OnReset()
+    public void OnReset(SendPolicy policy = SendPolicy.Reliable)
     {
         UnityUserReporting.CurrentClient.LogEvent(UserReportEventLevel.Info, "Broadcast - game reset");
         using (BinaryWriter binaryWriter = new BinaryWriter(new MemoryStream(64)))
         {
             binaryWriter.Write((byte)PacketType.RESET);
             binaryWriter.Write(localUser.ID);
-            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), SendPolicy.Reliable);
+            SendPacketToConnectedUsers(((MemoryStream)binaryWriter.BaseStream).ToArray(), policy);
         }
 
         resetGame();
+
+        if (room != null)
+        {
+            List<CardHandController> handControllers = new List<CardHandController>();
+
+            foreach (var user in room.UsersOptional)
+            {
+                if (user.ID == localUser.ID) handControllers.Add(cardHandController);
+                else
+                    if (remoteCardHands.ContainsKey(user.ID)) handControllers.Add(remoteCardHands[user.ID]);
+            }
+
+            for (int i = 0; i < 13; i++)
+            {
+                foreach (var hand in handControllers)
+                {
+                    var card = deckController.getNextCard(Vector3.zero, Quaternion.identity);
+                    hand.AddCard(card);
+                }
+            }
+
+            foreach (var hand in handControllers)
+                hand.SortCards();
+
+            deckController.SendUpdate(SendPolicy.Reliable);
+            cardHandController.SendUpdate(SendPolicy.Reliable);
+            foreach (var remoteCardHand in remoteCardHands.Values)
+                remoteCardHand.SendUpdate(SendPolicy.Reliable);
+        }
+
     }
 
     private GameObject getTrackedObject(string name)

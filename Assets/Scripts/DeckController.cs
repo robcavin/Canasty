@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Oculus.Platform;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,7 +7,7 @@ public class DeckController : MonoBehaviour
 {
     public CanastyController canastyController;
 
-    private List<byte> cards = new List<byte>(52 * 2);
+    private List<byte> cards = new List<byte>(54 * 2);
     private byte cardIndex = 0;
     private System.Random rng = new System.Random();
 
@@ -55,23 +56,32 @@ public class DeckController : MonoBehaviour
         UpdateDeckVisibility();
     }
 
-    public void SendUpdate()
+    public void SendUpdate(SendPolicy policy = SendPolicy.Reliable)
     {
-        canastyController.OnDeckUpdate(cards, cardIndex);
+        canastyController.OnDeckUpdate(cards, cardIndex, policy);
     }
 
     public static GameObject instantiateCard(int index)
     {
-        int suit = (index / 13) % 4;
-        int suit_index = index % 13 + 1;
+        string prefabPath;
 
-        string suit_name =
-            (suit == 0) ? "Club" :
-            (suit == 1) ? "Diamond" :
-            (suit == 2) ? "Heart" :
-            "Spade";
+        if (index < 52 * 2)
+        {
+            int suit = (index / 13) % 4;
+            int suit_index = index % 13 + 1;
 
-        string prefabPath = "Cards/Blue_PlayingCards_" + suit_name + suit_index.ToString("D2") + "_00";
+            string suit_name =
+                (suit == 0) ? "Club" :
+                (suit == 1) ? "Diamond" :
+                (suit == 2) ? "Heart" :
+                "Spade";
+
+            prefabPath = "Cards/Blue_PlayingCards_" + suit_name + suit_index.ToString("D2") + "_00";
+        } else
+        {
+            prefabPath = "Cards/Blue_PlayingCards_Joker_00";
+        }
+
         var cardObj = Instantiate(Resources.Load<GameObject>(prefabPath));
         cardObj.name = "Card" + index.ToString();
         cardObj.tag = "PlayingCard";
@@ -110,7 +120,7 @@ public class DeckController : MonoBehaviour
 
     private void Awake()
     {
-        for (byte i = 0; i < 52 * 2; i++)
+        for (byte i = 0; i < 54 * 2; i++)
             cards.Add(i);
         Shuffle(cards);
         cardIndex = 0;
